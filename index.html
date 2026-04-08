@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion d'Inventaire</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+    <div id="loginScreen" class="flex flex-col items-center justify-center h-screen">
+        <div class="bg-white p-8 rounded-lg shadow-md w-96 text-center">
+            <h1 class="text-2xl font-bold mb-6 text-blue-600">Connexion</h1>
+            <input type="password" id="accessCode" placeholder="Entrez votre code..." class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4 text-center text-lg">
+            <button onclick="login()" class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition">Valider</button>
+            <p id="loginError" class="text-red-500 mt-3 hidden text-sm">Code incorrect.</p>
+            <p class="text-gray-400 mt-4 text-xs">Note: Entrez "admin" pour le panneau d'administration.</p>
+        </div>
+    </div>
+
+    <div id="adminScreen" class="hidden p-8 max-w-6xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Panneau d'Administration</h1>
+            <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Déconnexion</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">1. Ajouter un Service</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="newService" placeholder="Nom du service" class="flex-1 border px-3 py-2 rounded">
+                    <button onclick="addService()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Ajouter</button>
+                </div>
+                <ul id="serviceList" class="mt-4 list-disc pl-5 text-gray-600"></ul>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">2. Types d'Équipement</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="newType" placeholder="Ex: PC, Imprimante..." class="flex-1 border px-3 py-2 rounded">
+                    <button onclick="addType()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Ajouter</button>
+                </div>
+                <ul id="typeList" class="mt-4 list-disc pl-5 text-gray-600"></ul>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow md:col-span-2">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">3. Affecter un Utilisateur</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <input type="text" id="userName" placeholder="Nom du responsable" class="border px-3 py-2 rounded w-full">
+                    <input type="text" id="userCode" placeholder="Code d'accès unique" class="border px-3 py-2 rounded w-full">
+                    <div class="border px-3 py-2 rounded h-32 overflow-y-auto bg-gray-50" id="userServiceCheckboxes">
+                        <p class="text-sm text-gray-400">Chargement...</p>
+                    </div>
+                </div>
+                <button onclick="addUser()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Créer Utilisateur</button>
+                
+                <h3 class="font-semibold mt-6 mb-2">Utilisateurs enregistrés :</h3>
+                <ul id="userList" class="list-disc pl-5 text-gray-600 space-y-1"></ul>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow md:col-span-2">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">Inventaire Global</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-600 text-sm">
+                                <th class="p-2 border">N° Inventaire</th>
+                                <th class="p-2 border">Type</th>
+                                <th class="p-2 border">Marque / Modèle</th>
+                                <th class="p-2 border">Service</th>
+                                <th class="p-2 border">Saisi par</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="userScreen" class="hidden p-8 max-w-3xl mx-auto">
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Saisie d'Inventaire</h1>
+                <p class="text-gray-500" id="welcomeMessage"></p>
+            </div>
+            <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Déconnexion</button>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow">
+            <form id="equipmentForm" onsubmit="submitEquipment(event)">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <div class="col-span-1 md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Service d’affectation *</label>
+                        <select id="formService" required class="w-full border border-gray-300 px-3 py-2 rounded focus:ring-blue-500 focus:border-blue-500"></select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Type d'équipement *</label>
+                        <select id="formType" required class="w-full border border-gray-300 px-3 py-2 rounded focus:ring-blue-500 focus:border-blue-500"></select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Numéro d'inventaire *</label>
+                        <input type="text" id="formInvNum" required class="w-full border border-gray-300 px-3 py-2 rounded focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Marque *</label>
+                        <input type="text" id="formMarque" required class="w-full border border-gray-300 px-3 py-2 rounded focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Modèle *</label>
+                        <input type="text" id="formModel" required class="w-full border border-gray-300 px-3 py-2 rounded focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div class="col-span-1 md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Localisation (Bureau, Salle...) *</label>
+                        <input type="text" id="formLocalisation" required class="w-full border border-gray-300 px-3 py-2 rounded focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div class="col-span-1 md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Observation</label>
+                        <textarea id="formObservation" rows="3" class="w-full border border-gray-300 px-3 py-2 rounded focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-md font-semibold hover:bg-blue-700 transition">Enregistrer l'équipement</button>
+                </div>
+                <p id="successMessage" class="text-green-600 mt-4 hidden text-center font-medium">Équipement enregistré avec succès !</p>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ANTI-INSPECT ELEMENT & F12 PROTECTION
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.onkeydown = function (e) {
+            if (e.key === "F12" || 
+               (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "J" || e.key === "C")) || 
+               (e.ctrlKey && e.key === "U")) {
+                e.preventDefault();
+                return false;
+            }
+        };
+
+        // API CONFIGURATION
+        const WORKER_URL = "YOUR_WORKER_URL_HERE"; // <--- CHANGE THIS TO YOUR WORKER DOMAIN
+        
+        let db = { services: [], equipmentTypes: [], users: [], inventory: [] };
+        let currentUser = null;
+
+        async function fetchDB() {
+            try {
+                const res = await fetch(`${WORKER_URL}/api/init`);
+                db = await res.json();
+                if (!document.getElementById('adminScreen').classList.contains('hidden')) refreshAdminUI();
+                if (!document.getElementById('userScreen').classList.contains('hidden')) setupUserForm();
+            } catch (err) {
+                console.error("Erreur de connexion à la base de données", err);
+            }
+        }
+
+        // ---- NAVIGATION & AUTH ----
+        async function login() {
+            await fetchDB(); // Always sync latest data on login attempt
+            const code = document.getElementById('accessCode').value.trim();
+            const errorElement = document.getElementById('loginError');
+            
+            if (code.toLowerCase() === 'admin') {
+                showScreen('adminScreen');
+                refreshAdminUI();
+                errorElement.classList.add('hidden');
+            } else {
+                const user = db.users.find(u => u.code === code);
+                if (user) {
+                    currentUser = user;
+                    showScreen('userScreen');
+                    setupUserForm();
+                    errorElement.classList.add('hidden');
+                } else {
+                    errorElement.classList.remove('hidden');
+                }
+            }
+            document.getElementById('accessCode').value = '';
+        }
+
+        function logout() {
+            currentUser = null;
+            showScreen('loginScreen');
+        }
+
+        function showScreen(screenId) {
+            ['loginScreen', 'adminScreen', 'userScreen'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        document.getElementById('accessCode').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') login();
+        });
+
+        // ---- ADMIN FUNCTIONS ----
+        async function addService() {
+            const val = document.getElementById('newService').value.trim();
+            if (val && !db.services.includes(val)) {
+                await fetch(`${WORKER_URL}/api/services`, {
+                    method: 'POST', body: JSON.stringify({ name: val }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                document.getElementById('newService').value = '';
+                await fetchDB();
+            }
+        }
+
+        async function addType() {
+            const val = document.getElementById('newType').value.trim();
+            if (val && !db.equipmentTypes.includes(val)) {
+                await fetch(`${WORKER_URL}/api/types`, {
+                    method: 'POST', body: JSON.stringify({ name: val }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                document.getElementById('newType').value = '';
+                await fetchDB();
+            }
+        }
+
+        async function addUser() {
+            const name = document.getElementById('userName').value.trim();
+            const code = document.getElementById('userCode').value.trim();
+            const checkboxes = document.querySelectorAll('.service-checkbox:checked');
+            const assignedServices = Array.from(checkboxes).map(cb => cb.value);
+
+            if (name && code && assignedServices.length > 0) {
+                const res = await fetch(`${WORKER_URL}/api/users`, {
+                    method: 'POST', 
+                    body: JSON.stringify({ name, code, services: assignedServices }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!res.ok) {
+                    alert("Ce code est déjà utilisé.");
+                    return;
+                }
+
+                document.getElementById('userName').value = '';
+                document.getElementById('userCode').value = '';
+                checkboxes.forEach(cb => cb.checked = false);
+                await fetchDB();
+            } else {
+                alert("Veuillez remplir le nom, le code, et cocher au moins un service.");
+            }
+        }
+
+        function refreshAdminUI() {
+            document.getElementById('serviceList').innerHTML = db.services.map(s => `<li>${s}</li>`).join('');
+            document.getElementById('typeList').innerHTML = db.equipmentTypes.map(t => `<li>${t}</li>`).join('');
+            
+            const cbContainer = document.getElementById('userServiceCheckboxes');
+            if (db.services.length === 0) {
+                cbContainer.innerHTML = `<p class="text-sm text-gray-400">Ajoutez d'abord des services</p>`;
+            } else {
+                cbContainer.innerHTML = db.services.map(s => `
+                    <label class="flex items-center space-x-2 text-sm mb-1">
+                        <input type="checkbox" value="${s}" class="service-checkbox rounded">
+                        <span>${s}</span>
+                    </label>
+                `).join('');
+            }
+
+            document.getElementById('userList').innerHTML = db.users.map(u => 
+                `<li><strong>${u.name}</strong> (Code: ${u.code}) - Affecté à: ${u.services.join(', ')}</li>`
+            ).join('');
+
+            document.getElementById('inventoryTableBody').innerHTML = db.inventory.map(item => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-2 border font-medium">${item.invNum}</td>
+                    <td class="p-2 border">${item.type}</td>
+                    <td class="p-2 border">${item.marque} / ${item.model}</td>
+                    <td class="p-2 border">${item.service}</td>
+                    <td class="p-2 border text-sm text-gray-500">${item.user_name}</td>
+                </tr>
+            `).join('');
+        }
+
+        // ---- USER FUNCTIONS ----
+        function setupUserForm() {
+            document.getElementById('welcomeMessage').innerText = `Connecté en tant que: ${currentUser.name}`;
+            
+            const serviceSelect = document.getElementById('formService');
+            serviceSelect.innerHTML = `<option value="">-- Sélectionnez un service --</option>` + 
+                currentUser.services.map(s => `<option value="${s}">${s}</option>`).join('');
+
+            const typeSelect = document.getElementById('formType');
+            typeSelect.innerHTML = `<option value="">-- Sélectionnez le type --</option>` + 
+                db.equipmentTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+        }
+
+        async function submitEquipment(e) {
+            e.preventDefault();
+            
+            const newItem = {
+                service: document.getElementById('formService').value,
+                type: document.getElementById('formType').value,
+                invNum: document.getElementById('formInvNum').value,
+                marque: document.getElementById('formMarque').value,
+                model: document.getElementById('formModel').value,
+                localisation: document.getElementById('formLocalisation').value,
+                observation: document.getElementById('formObservation').value,
+                user: currentUser.name
+            };
+
+            await fetch(`${WORKER_URL}/api/inventory`, {
+                method: 'POST', body: JSON.stringify(newItem),
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const msg = document.getElementById('successMessage');
+            msg.classList.remove('hidden');
+            document.getElementById('equipmentForm').reset();
+            
+            setTimeout(() => {
+                msg.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Initial Data Fetch
+        fetchDB();
+    </script>
+</body>
+</html>
