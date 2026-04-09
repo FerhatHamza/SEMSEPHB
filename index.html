@@ -148,25 +148,40 @@
         };
 
         // API CONFIGURATION
-        const WORKER_URL = "https://inventory-api.ferhathamza17.workers.dev/"; // <--- CHANGE THIS TO YOUR WORKER DOMAIN
+        const WORKER_URL = "https://inventory-api.ferhathamza17.workers.dev"; // <--- CHANGE THIS TO YOUR WORKER DOMAIN
+        const BASE_API = WORKER_URL.endsWith('/') ? WORKER_URL.slice(0, -1) : WORKER_URL; // Fixes trailing slash issues
         
         let db = { services: [], equipmentTypes: [], users: [], inventory: [] };
         let currentUser = null;
 
-        async function fetchDB() {
+        // Custom fetch wrapper to show errors since F12 is disabled
+        async function fetchWithAlert(url, options = {}) {
             try {
-                const res = await fetch(`${WORKER_URL}/api/init`);
-                db = await res.json();
+                const res = await fetch(url, options);
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(`Erreur: ${data.error || 'Erreur Serveur'}`);
+                    return null;
+                }
+                return data;
+            } catch (err) {
+                alert(`Erreur de connexion API:\nVérifiez que le WORKER_URL est correct et que le Worker est déployé.\n\nDétail: ${err.message}`);
+                return null;
+            }
+        }
+
+        async function fetchDB() {
+            const data = await fetchWithAlert(`${BASE_API}/api/init`);
+            if (data) {
+                db = data;
                 if (!document.getElementById('adminScreen').classList.contains('hidden')) refreshAdminUI();
                 if (!document.getElementById('userScreen').classList.contains('hidden')) setupUserForm();
-            } catch (err) {
-                console.error("Erreur de connexion à la base de données", err);
             }
         }
 
         // ---- NAVIGATION & AUTH ----
         async function login() {
-            await fetchDB(); // Always sync latest data on login attempt
+            await fetchDB(); 
             const code = document.getElementById('accessCode').value.trim();
             const errorElement = document.getElementById('loginError');
             
@@ -208,24 +223,28 @@
         async function addService() {
             const val = document.getElementById('newService').value.trim();
             if (val && !db.services.includes(val)) {
-                await fetch(`${WORKER_URL}/api/services`, {
+                const result = await fetchWithAlert(`${BASE_API}/api/services`, {
                     method: 'POST', body: JSON.stringify({ name: val }),
                     headers: { 'Content-Type': 'application/json' }
                 });
-                document.getElementById('newService').value = '';
-                await fetchDB();
+                if (result) {
+                    document.getElementById('newService').value = '';
+                    await fetchDB();
+                }
             }
         }
 
         async function addType() {
             const val = document.getElementById('newType').value.trim();
             if (val && !db.equipmentTypes.includes(val)) {
-                await fetch(`${WORKER_URL}/api/types`, {
+                const result = await fetchWithAlert(`${BASE_API}/api/types`, {
                     method: 'POST', body: JSON.stringify({ name: val }),
                     headers: { 'Content-Type': 'application/json' }
                 });
-                document.getElementById('newType').value = '';
-                await fetchDB();
+                if (result) {
+                    document.getElementById('newType').value = '';
+                    await fetchDB();
+                }
             }
         }
 
@@ -236,21 +255,18 @@
             const assignedServices = Array.from(checkboxes).map(cb => cb.value);
 
             if (name && code && assignedServices.length > 0) {
-                const res = await fetch(`${WORKER_URL}/api/users`, {
+                const result = await fetchWithAlert(`${BASE_API}/api/users`, {
                     method: 'POST', 
                     body: JSON.stringify({ name, code, services: assignedServices }),
                     headers: { 'Content-Type': 'application/json' }
                 });
                 
-                if (!res.ok) {
-                    alert("Ce code est déjà utilisé.");
-                    return;
+                if (result) {
+                    document.getElementById('userName').value = '';
+                    document.getElementById('userCode').value = '';
+                    checkboxes.forEach(cb => cb.checked = false);
+                    await fetchDB();
                 }
-
-                document.getElementById('userName').value = '';
-                document.getElementById('userCode').value = '';
-                checkboxes.forEach(cb => cb.checked = false);
-                await fetchDB();
             } else {
                 alert("Veuillez remplir le nom, le code, et cocher au moins un service.");
             }
@@ -314,22 +330,27 @@
                 user: currentUser.name
             };
 
-            await fetch(`${WORKER_URL}/api/inventory`, {
+            const result = await fetchWithAlert(`${BASE_API}/api/inventory`, {
                 method: 'POST', body: JSON.stringify(newItem),
                 headers: { 'Content-Type': 'application/json' }
             });
 
-            const msg = document.getElementById('successMessage');
-            msg.classList.remove('hidden');
-            document.getElementById('equipmentForm').reset();
-            
-            setTimeout(() => {
-                msg.classList.add('hidden');
-            }, 3000);
+            if (result) {
+                const msg = document.getElementById('successMessage');
+                msg.classList.remove('hidden');
+                document.getElementById('equipmentForm').reset();
+                
+                setTimeout(() => {
+                    msg.classList.add('hidden');
+                }, 3000);
+            }
         }
 
         // Initial Data Fetch
         fetchDB();
     </script>
+
+    
+    
 </body>
 </html>
