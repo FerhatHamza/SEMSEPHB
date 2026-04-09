@@ -14,7 +14,7 @@
             <input type="password" id="accessCode" placeholder="Entrez votre code..." class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4 text-center text-lg">
             <button onclick="login()" class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition">Valider</button>
             <p id="loginError" class="text-red-500 mt-3 hidden text-sm">Code incorrect.</p>
-            <p class="text-gray-400 mt-4 text-xs">Note: Entrez "admin" pour le panneau d'administration.</p>
+            <p class="text-gray-400 mt-4 text-xs">Note: Entrez password pour le panneau d'administration/utilisateur.</p>
         </div>
     </div>
 
@@ -148,7 +148,7 @@
         };
 
         // API CONFIGURATION
-        const WORKER_URL = "YOUR_WORKER_URL_HERE"; // <--- CHANGE THIS TO YOUR WORKER DOMAIN
+        const WORKER_URL = "https://inventory-api.ferhathamza17.workers.dev/"; // <--- CHANGE THIS TO YOUR WORKER DOMAIN
         
         let db = { services: [], equipmentTypes: [], users: [], inventory: [] };
         let currentUser = null;
